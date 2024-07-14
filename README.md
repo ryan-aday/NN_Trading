@@ -1,23 +1,17 @@
 # NN_Trading
 Creating NN models to trade with. Keeping this public for all to access &amp; improve!
 
-## NeptuneAI (Experimental)
-Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was ARIMA theoretically.
-
-Prophet (from Meta) was easier to set up, but less consistently accurate when adding additional parameters.
-
-### load_stock.py
-Loads stock price intraday information from AlphaVantage. Requires API key, and only permits a maximum of 30 pulls.
-Would not recommend unless you do not mind paying for the subscription.
-
-AlphaVantage documentation: https://www.alphavantage.co/documentation/
-
 ## SFI_AI
 Sentiment & Financial Indicator (SFI) AI models.
 
 Aggregates all financial data and news articles for the past 1000 days, then uses features from the financial data and sentiment analysis to determine whether the ticker is likely to go up or down in price the following day.
 
 Both the bin.py and dl.py scripts compare different model/optimizer algorithms w/ different parameters to train, then select the best model/optimizer to provide the model with the best accuracy. Both are also parallelized for improved efficiency (max_workers = 16).
+
+### Before running:
+Run the following command to install/update the necessary libraries:
+
+pip install requirements -r
 
 ### Data Aggregation (Both scripts)
 Uses nltk for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
@@ -110,3 +104,31 @@ Deep Learning stucture is a single input layer, 2 hidden layer  w/ relu activati
             'amsgrad': [True, False]
         })
     ]
+
+## NeptuneAI (Experimental)
+Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was ARIMA theoretically.
+
+Prophet (from Meta) was easier to set up, but less consistently accurate when adding additional parameters.
+
+### load_stock.py
+Loads stock price intraday information from AlphaVantage. Requires API key, and only permits a maximum of 30 pulls.
+Would not recommend unless you do not mind paying for the subscription.
+
+AlphaVantage documentation: https://www.alphavantage.co/documentation/
+
+### train_ARIMA.py
+Extrapolates moving day averages to plot out predictions for stock tickers from a provided .CSV sheet. Not very accurate for very volatile stocks.
+   
+    stockprices_rolled_3d = stockprices[lag_features].rolling(window=7, min_periods=0)
+    stockprices_mean_3d = stockprices_rolled_3d.mean().shift(1).reset_index().astype(np.float32)
+    stockprices_std_3d = stockprices_rolled_3d.std()
+    stockprices_rolled_7d = stockprices[lag_features].rolling(window=7, min_periods=0)
+    stockprices_mean_7d = stockprices_rolled_7d.mean().shift(1).reset_index().astype(np.float32)
+    stockprices_std_7d = stockprices_rolled_7d.std()
+    stockprices_rolled_30d = stockprices[lag_features].rolling(window=7, min_periods=0)
+    stockprices_mean_30d = stockprices_rolled_30d.mean().shift(1).reset_index().astype(np.float32)
+    stockprices_std_30d = stockprices_rolled_30d.std()
+
+### train_prophet.py
+Plots out predictions for stock tickers from a provided .CSV sheet using the proprietary Prophet algorithm. Barely any setup needed for decent accuracy, but adding more hyperparameters reduces accuracy drastically.
+   
