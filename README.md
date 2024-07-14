@@ -7,7 +7,10 @@ Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predi
 Prophet (from Meta) was easier to set up, but less consistently accurate when adding additional parameters.
 
 ### load_stock.py
-Loads stock price intraday information from AlphaVantage. Requires 
+Loads stock price intraday information from AlphaVantage. Requires API key, and only permits a maximum of 30 pulls.
+Would not recommend unless you do not mind paying for the subscription.
+
+AlphaVantage documentation: https://www.alphavantage.co/documentation/
 
 ## SFI_AI
 Sentiment & Financial Indicator (SFI) AI models.
