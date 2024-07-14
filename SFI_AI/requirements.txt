@@ -1,0 +1,12 @@
+yfinance
+pandas
+numpy
+scikit-learn
+newspaper3k
+nltk
+transformers
+datetime
+requests
+bs4
+tf-keras
+ta
