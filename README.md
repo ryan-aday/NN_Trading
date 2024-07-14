@@ -1,8 +1,13 @@
 # NN_Trading
 Creating NN models to trade with. Keeping this public for all to access &amp; improve!
 
-## NeptuneAI
-Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was 
+## NeptuneAI (Experimental)
+Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was ARIMA theoretically.
+
+Prophet (from Meta) was easier to set up, but less consistently accurate when adding additional parameters.
+
+### load_stock.py
+Loads stock price intraday information from AlphaVantage. Requires 
 
 ## SFI_AI
 Sentiment & Financial Indicator (SFI) AI models.
