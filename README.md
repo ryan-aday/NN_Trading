@@ -14,7 +14,7 @@ Run the following command to install/update the necessary libraries:
 pip install requirements -r
 
 ### Data Aggregation (Both scripts)
-Uses nltk for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
+Uses nltk & Hugging Face (Transformer) for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
 
 #### Financial Indicators
 Some of the more specialized indicators were researched here: https://www.investopedia.com/top-7-technical-analysis-tools-4773275
