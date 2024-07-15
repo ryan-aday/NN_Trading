@@ -35,8 +35,8 @@ RSI, Bollinger Bands, OBV, A/D Line, ADI, Aroon Indicator, and Stochastic Indica
  - Stochiastic Oscillator
 
 Other good sources:
-https://stackoverflow.com/questions/61976027/scraping-yahoo-finance-at-regular-intervals
-https://howtotrade.com/trading-strategies/triple-moving-average-crossover/
+ - https://stackoverflow.com/questions/61976027/scraping-yahoo-finance-at-regular-intervals
+ - https://howtotrade.com/trading-strategies/triple-moving-average-crossover/
 
 ### bin.py: Binary Classification
 Uses sklearn, transformers to apply binary classification models with varying parameters to optimize each model for improved accuracy.
@@ -109,17 +109,17 @@ Deep Learning stucture is a single input layer, 2 hidden layer  w/ relu activati
     ]
 
 Good sources:
-https://machinelearningmastery.com/dropout-for-regularizing-deep-neural-networks/
-https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
-https://www.rdocumentation.org/packages/keras/versions/2.0.5/topics/fit
-https://stackoverflow.com/questions/75162883/keras-loss-value-very-high-and-not-decreasing
-https://www.geeksforgeeks.org/hidden-layer-perceptron-in-tensorflow/
-https://keras.io/api/optimizers/lion/
-https://datascience.stackexchange.com/questions/57738/can-tanh-be-used-as-an-output-for-a-binary-classifier
-https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape-units-batch-size-dim-etc
-https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam
-https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
-https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
+ - https://machinelearningmastery.com/dropout-for-regularizing-deep-neural-networks/
+ - https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
+ - https://www.rdocumentation.org/packages/keras/versions/2.0.5/topics/fit
+ - https://stackoverflow.com/questions/75162883/keras-loss-value-very-high-and-not-decreasing
+ - https://www.geeksforgeeks.org/hidden-layer-perceptron-in-tensorflow/
+ - https://keras.io/api/optimizers/lion/
+ - https://datascience.stackexchange.com/questions/57738/can-tanh-be-used-as-an-output-for-a-binary-classifier
+ - https://stackoverflow.com/questions/44747343/keras-input-explanation-input-shape-units-batch-size-dim-etc
+ - https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam
+ - https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
+ - https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
 
 ## NeptuneAI (Experimental)
 Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was ARIMA theoretically.
