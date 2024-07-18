@@ -2,12 +2,12 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier
 from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.svm import SVC, SVR
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, mean_squared_error
 from newspaper import Article
 import nltk
 from transformers import pipeline
@@ -17,6 +17,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import ta
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
 
 nltk.download('vader_lexicon')
 
@@ -93,9 +95,9 @@ def create_features(data, daily_data):
 
     data.dropna(inplace=True)
     features = data[['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator']]
-    return features, data['Direction']
+    return features, data['Direction'], data['Close']
 
-def train_model(features, labels):
+def train_classification_models(features, labels):
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.1, random_state=42)
 
     models = {
@@ -120,22 +122,83 @@ def train_model(features, labels):
     }
 
     best_models = {}
+    best_accuracy = 0
+    best_model_name = None
 
     for model_name in models.keys():
         grid_search = GridSearchCV(models[model_name], param_grids[model_name], cv=3, scoring='accuracy', n_jobs=-1)
         grid_search.fit(X_train, y_train)
         best_models[model_name] = grid_search.best_estimator_
         y_pred = grid_search.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
         print(f"Model: {model_name}")
         print("Best Parameters:", grid_search.best_params_)
-        print("Accuracy:", accuracy_score(y_test, y_pred))
+        print("Accuracy:", accuracy)
         print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
         print("Classification Report:\n", classification_report(y_test, y_pred))
 
-    return best_models
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            best_model_name = model_name
 
-def predict(model, new_data):
-    return model.predict(new_data)
+    print(f"Best Classification Model: {best_model_name} with accuracy: {best_accuracy}")
+    return best_models, best_model_name, best_accuracy
+
+def train_regression_models(features, prices):
+    X_train, X_test, y_train, y_test = train_test_split(features, prices, test_size=0.1, random_state=42)
+
+    models = {
+        'RandomForest': RandomForestRegressor(),
+        'LinearRegression': LinearRegression(),
+        'SVR': SVR(),
+        'ARIMA': sm.tsa.ARIMA
+    }
+
+    param_grids = {
+        'RandomForest': {'n_estimators': [50, 100, 150], 'max_depth': [5, 10, 15]},
+        'LinearRegression': {},  # Linear regression does not have hyperparameters to tune in this context
+        'SVR': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']},
+        'ARIMA': {'order': [(5, 1, 0), (0, 1, 1), (1, 1, 1), (0, 1, 0)]}
+    }
+
+    best_models = {}
+    best_mse = float('inf')
+    best_model_name = None
+
+    for model_name in models.keys():
+        if model_name == 'ARIMA':
+            for order in param_grids[model_name]['order']:
+                try:
+                    model = models[model_name](y_train, order=order).fit()
+                    y_pred = model.forecast(steps=len(y_test))
+                    mse = mean_squared_error(y_test, y_pred)
+                    if mse < best_mse:
+                        best_mse = mse
+                        best_models[model_name] = model
+                        best_model_name = model_name
+                        best_params = {'order': order}
+                except Exception as e:
+                    print(f"Error training ARIMA model with order {order}: {e}")
+                    continue
+        else:
+            grid_search = GridSearchCV(models[model_name], param_grids[model_name], cv=3, scoring='neg_mean_squared_error', n_jobs=-1)
+            grid_search.fit(X_train, y_train)
+            best_models[model_name] = grid_search.best_estimator_
+            y_pred = grid_search.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            if mse < best_mse:
+                best_mse = mse
+                best_model_name = model_name
+                best_params = grid_search.best_params_
+
+    print(f"Best Regression Model: {best_model_name} with MSE: {best_mse} and Parameters: {best_params}")
+    return best_models, best_model_name
+
+def predict(model, new_data, model_name):
+    if model_name == 'ARIMA':
+        return model.forecast(steps=len(new_data))
+    else:
+        return model.predict(new_data)
 
 def get_news_sentiment(ticker, start_date, end_date):
     sentiment_analyzer = pipeline('sentiment-analysis')
@@ -185,8 +248,16 @@ def get_news_articles(ticker, date):
             continue
     return articles
 
+def generate_gaussian_features(stock_data, future_dates, feature_names):
+    future_features = pd.DataFrame(index=future_dates)
+    for feature in feature_names:
+        mean = stock_data[feature].mean()
+        std = stock_data[feature].std()
+        future_features[feature] = np.random.normal(mean, std * 0.5, len(future_dates))
+    return future_features
+
 # Prompt user to enter stock ticker
-ticker = input("Please enter the stock ticker symbol: ").upper()[0]
+ticker = input("Please enter the stock ticker symbol: ").upper()
 
 # Parameters
 interval = '1d'
@@ -211,16 +282,44 @@ if not stock_data.empty:
     stock_data = stock_data.join(sentiment_scores.rename('Sentiment'), how='left').fillna(0)
 
     # Create features and labels
-    features, labels = create_features(stock_data, daily_data)
+    features, labels, prices = create_features(stock_data, daily_data)
     features['Sentiment'] = stock_data['Sentiment']
 
-    # Train models
-    best_models = train_model(features, labels)
+    # Train classification models
+    best_classification_models, best_model_name, best_accuracy = train_classification_models(features, labels)
+    best_classification_model = best_classification_models[best_model_name]
+
+    # Train regression models
+    best_regression_models, best_regression_model_name = train_regression_models(features, prices)
+    best_regression_model = best_regression_models[best_regression_model_name]
 
     # Example of making a prediction
     new_data = features.iloc[-1:].values  # Using the most recent data point as an example
-    for model_name, model in best_models.items():
-        prediction = predict(model, new_data)
+    for model_name, model in best_classification_models.items():
+        prediction = predict(model, new_data, model_name)
         print(f"Prediction for the next day with {model_name}:", "Up" if prediction == 1 else "Down")
+
+    # Generate future feature data for the next two weeks using Gaussian estimates
+    future_dates = pd.date_range(start=end_date, periods=14, freq='B')
+    feature_names = ['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Sentiment']
+    future_features = generate_gaussian_features(stock_data, future_dates, feature_names)
+
+    # Predict stock price for the next two weeks
+    future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
+    future_prices = pd.Series(future_predictions, index=future_dates)
+    print(f"Best Classification Model Accuracy: {best_accuracy}")
+    print("Predicted stock prices for the next two weeks:")
+    print(future_prices)
+
+    # Plot historical and predicted prices
+    plt.figure(figsize=(14, 7))
+    plt.plot(stock_data.index[-120:], stock_data['Close'][-120:], color='green', label='Historical Closing Price')
+    plt.plot(future_prices.index, future_prices, color='red', label='Predicted Closing Price')
+    plt.xlabel('Date')
+    plt.ylabel('Closing Price')
+    plt.title(f'{ticker} Stock Price Prediction')
+    plt.legend()
+    plt.show()
+
 else:
     print("No stock data available to train the model.")
