@@ -248,12 +248,21 @@ def get_news_articles(ticker, date):
             continue
     return articles
 
-def generate_gaussian_features(stock_data, future_dates, feature_names):
+def generate_gaussian_features(stock_data, future_dates, feature_names, sentiment_scores):
     future_features = pd.DataFrame(index=future_dates)
+    sentiment_mean = sentiment_scores.mean()
+    sentiment_std = sentiment_scores.std()
+
     for feature in feature_names:
         mean = stock_data[feature].mean()
         std = stock_data[feature].std()
-        future_features[feature] = np.random.normal(mean, std * 0.5, len(future_dates))
+        
+        # Adjust the standard deviation based on sentiment
+        adjusted_std = std * (1 - sentiment_mean)/2  # Adjusting the scale
+        #adjusted_std = std * (0.5 + sentiment_mean / 2)  # Adjusting the scale
+        #adjusted_std = min(adjusted_std, std * 2)  # Preventing too much scaling
+        
+        future_features[feature] = np.random.normal(mean, adjusted_std, len(future_dates))
     return future_features
 
 # Prompt user to enter stock ticker
@@ -302,7 +311,7 @@ if not stock_data.empty:
     # Generate future feature data for the next two weeks using Gaussian estimates
     future_dates = pd.date_range(start=end_date, periods=14, freq='B')
     feature_names = ['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Sentiment']
-    future_features = generate_gaussian_features(stock_data, future_dates, feature_names)
+    future_features = generate_gaussian_features(stock_data, future_dates, feature_names, sentiment_scores)
 
     # Predict stock price for the next two weeks
     future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
