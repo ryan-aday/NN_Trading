@@ -77,8 +77,9 @@ The regression models:
  - SVR
  - ARIMA
 
-The features used for future regression predictions are semi-normally distributed from the historical ticker dataset, with a standard deviation of 0.5 * sigma.
-This was done to reduce observed heavily volatile price movement in all stocks.
+The features used for future regression predictions are semi-normally distributed from the historical ticker dataset.
+The sentiment analysis index (0 for low sentiment, 1 for good sentiment) is used to determine variability: adjusted_std = std * (1 - sentiment_mean)/2 * 0.5
+The 0.5 factor was introduced to reduce observed heavily volatile price movement in all stocks.
 
 Example output plot:
 ![Figure_2](https://github.com/user-attachments/assets/a7a6f462-a57a-4d5d-b5ca-21b6ac001a39)
