@@ -70,6 +70,19 @@ Least processing time for decent accuracy (usually around ~75% for the optimized
         }
     }
 
+Update (7/18/2024): The script now includes various regression models to predict the next two weeks closing price.
+The regression models:
+ - Random Forest
+ - Linear Regression (Linear regression does not have hyperparameters to tune in this context)
+ - SVR
+ - ARIMA
+
+The features used for future regression predictions are semi-normally distributed from the historical ticker dataset, with a standard deviation of 0.5 * sigma.
+This was done to reduce observed heavily volatile price movement in all stocks.
+
+Example output plot:
+![Figure_2](https://github.com/user-attachments/assets/a7a6f462-a57a-4d5d-b5ca-21b6ac001a39)
+
 ### dl.py: Deep Learning
 Uses sklearn, transformers to apply binary classification models with varying parameters to optimize each model for improved accuracy.
 
