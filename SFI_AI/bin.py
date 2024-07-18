@@ -258,7 +258,7 @@ def generate_gaussian_features(stock_data, future_dates, feature_names, sentimen
         std = stock_data[feature].std()
         
         # Adjust the standard deviation based on sentiment
-        adjusted_std = std * (1 - sentiment_mean)/2  # Adjusting the scale
+        adjusted_std = std * (1 - sentiment_mean)/2 * 0.5 # Adjusting the scale
         #adjusted_std = std * (0.5 + sentiment_mean / 2)  # Adjusting the scale
         #adjusted_std = min(adjusted_std, std * 2)  # Preventing too much scaling
         
@@ -310,8 +310,10 @@ if not stock_data.empty:
 
     # Generate future feature data for the next two weeks using Gaussian estimates
     future_dates = pd.date_range(start=end_date, periods=14, freq='B')
+    # Use only the past 120 days of historical data for generating future features
+    past_120_days_data = stock_data[-120:]
     feature_names = ['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Sentiment']
-    future_features = generate_gaussian_features(stock_data, future_dates, feature_names, sentiment_scores)
+    future_features = generate_gaussian_features(past_120_days_data, future_dates, feature_names, sentiment_scores)
 
     # Predict stock price for the next two weeks
     future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
