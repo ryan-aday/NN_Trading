@@ -357,10 +357,11 @@ def analyze_stocks(tickers):
             future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
             future_prices = pd.Series(future_predictions, index=future_dates)
 
-            # Calculate percent change and volatility index
-            most_recent_close = stock_data['Close'].iloc[-1]
-            percent_change = ((future_prices.iloc[-1] - most_recent_close) / most_recent_close) * 100
-            volatility_index = future_prices.std()
+            # Calculate percent change
+            percent_change = ((future_prices.iloc[-1] - stock_data['Close'].iloc[-1]) / stock_data['Close'].iloc[-1]) * 100
+
+            # Calculate volatility index
+            volatility_index = np.std(future_prices)
 
             results.append((ticker, percent_change, volatility_index))
 
@@ -388,21 +389,20 @@ def analyze_stocks(tickers):
     return results
 
 # Example tickers for S&P 500 or S&P 1000
-sp500_tickers = ['SPY', 'AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM']  # Add more tickers as needed
+sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM']  # Add more tickers as needed
 
 results = analyze_stocks(sp500_tickers)
 
-# Convert results to DataFrame
-results_df = pd.DataFrame(results, columns=['Ticker', 'Percent Change', 'Volatility Index'])
-
 # Sort results by percent change and volatility index
-results_sorted = results_df.sort_values(by=['Percent Change', 'Volatility Index'], ascending=[False, True])
+results_sorted = sorted(results, key=lambda x: (x[1], -x[2]), reverse=True)
 
 # Display top and bottom stocks
-print("Top predicted stocks by Percent Change and Volatility Index:")
-print(results_sorted.head(5))
+print("Top predicted stocks:")
+for ticker, percent_change, volatility_index in results_sorted[:5]:
+    print(f"{ticker}: Percent Change: {percent_change:.2f}%, Volatility Index: {volatility_index:.2f}")
 
-print("\nBottom predicted stocks by Percent Change and Volatility Index:")
-print(results_sorted.tail(5))
+print("\nBottom predicted stocks:")
+for ticker, percent_change, volatility_index in results_sorted[-5:]:
+    print(f"{ticker}: Percent Change: {percent_change:.2f}%, Volatility Index: {volatility_index:.2f}")
 
 plt.show()
