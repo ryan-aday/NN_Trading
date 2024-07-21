@@ -1,6 +1,9 @@
 # NN_Trading
 Creating deep learning and regression models to trade with. Keeping this public for all to access &amp; improve!
 
+## Thanks:
+ - Tom Sawada for the LSTM layer suggestion
+
 ## Updates:
 7/21/2024:
  - Added plots to bin.py and dl.py to also show historical closing price data.
