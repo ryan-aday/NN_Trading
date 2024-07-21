@@ -357,11 +357,13 @@ def analyze_stocks(tickers):
             future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
             future_prices = pd.Series(future_predictions, index=future_dates)
 
-            results.append((ticker, future_prices.iloc[-1]))
+            # Calculate the percent change
+            percent_change = (future_prices.iloc[-1] - stock_data['Close'].iloc[-1]) / stock_data['Close'].iloc[-1] * 100
+            results.append((ticker, percent_change))
 
             print(f"Best Classification Model: {best_model_name}")
             print(f"Best Classification Model Accuracy: {best_accuracy}")
-            print(f"Best Regression Model Accuracy: {best_regression_model_name}")
+            print(f"Best Regression Model: {best_regression_model_name}")
 
             print("Predicted stock prices for the next two weeks:")
             print(future_prices)
@@ -387,16 +389,16 @@ sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 
 
 results = analyze_stocks(sp500_tickers)
 
-# Sort results by predicted price
+# Sort results by percent change
 results_sorted = sorted(results, key=lambda x: x[1], reverse=True)
 
 # Display top and bottom stocks
-print("Top predicted stocks:")
-for ticker, price in results_sorted[:5]:
-    print(f"{ticker}: {price}")
+print("Top predicted stocks by percent change:")
+for ticker, percent_change in results_sorted[:5]:
+    print(f"{ticker}: {percent_change:.2f}%")
 
-print("\nBottom predicted stocks:")
-for ticker, price in results_sorted[-5:]:
-    print(f"{ticker}: {price}")
+print("\nBottom predicted stocks by percent change:")
+for ticker, percent_change in results_sorted[-5:]:
+    print(f"{ticker}: {percent_change:.2f}%")
 
 plt.show()
