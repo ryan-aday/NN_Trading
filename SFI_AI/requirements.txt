@@ -11,3 +11,5 @@ bs4
 tf-keras
 ta
 statsmodels
+tqdm
+holidays
