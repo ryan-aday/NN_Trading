@@ -1,7 +1,7 @@
 # NN_Trading
 Creating deep learning and regression models to trade with. Keeping this public for all to access &amp; improve!
 
-## Thanks:
+## Thanks
  - Tom Sawada for the LSTM layer suggestion
 
 ## Updates:
@@ -33,7 +33,7 @@ Run the following command to install/update the necessary libraries:
 
 pip install requirements -r
 
-### Data Aggregation (Both scripts)
+### Data Aggregation
 Uses nltk & Hugging Face (Transformer) for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
 
 #### Financial Indicators
