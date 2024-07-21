@@ -151,7 +151,7 @@ Uses sklearn, transformers, tensorflow to develop a deep learning network with p
 Models used:
  - Adam (Adaptive Moment Estimation), optimizer and shown parameters chosen through trial and error
 
-Deep Learning stucture is a single input layer, 2 hidden LSTM layers w/ relu activation functions.
+Deep Learning stucture is a single input layer, 2 hidden GRU layers w/ relu activation functions.
 
     model = Sequential()
     model.add(Input(shape=(X_train.shape[1], 1)))
