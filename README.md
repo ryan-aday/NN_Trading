@@ -36,7 +36,7 @@ Run the following command to install/update the necessary libraries:
 ### Troubleshooting:
 1. ImportError: lxml.html.clean module is now a separate project lxml_html_clean. Install lxml[html_clean] or lxml_html_clean directly.
 
-This is due to your Python version. lxml relates to the Article package, and works with the Python 3.10.
+This is due to your Python version. lxml relates to the Article package, and works with Python 3.11.
 As a fix- if you are using Anaconda, make a new environment for Python 3.11:
 
     conda create python=3.11 --name py311
