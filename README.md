@@ -206,5 +206,5 @@ Extrapolates moving day averages to plot out predictions for stock tickers from 
     stockprices_std_30d = stockprices_rolled_30d.std()
 
 ### train_prophet.py
-Plots out predictions for stock tickers from a provided .CSV sheet using the proprietary Prophet algorithm. Barely any setup needed for decent accuracy, but adding more hyperparameters reduces accuracy drastically.
+Plots out predictions for stock tickers from a provided .CSV sheet using Meta's proprietary Prophet algorithm. Barely any setup needed for decent accuracy, but adding more hyperparameters reduces accuracy drastically.
    
