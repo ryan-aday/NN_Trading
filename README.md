@@ -31,7 +31,7 @@ NOTE: Currently, to have predictions that are meaningful to project for the futu
 ### Before running:
 Run the following command to install/update the necessary libraries:
 
-pip install --upgrade --force-reinstall -r requirements.txt
+pip3 install --upgrade --force-reinstall -r requirements.txt
 
 ### Data Aggregation
 Uses nltk & Hugging Face (Transformer) for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
