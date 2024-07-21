@@ -383,7 +383,7 @@ def analyze_stocks(tickers):
     return results
 
 # Example tickers for S&P 500 or S&P 1000
-sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSMC']  # Add more tickers as needed
+sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM']  # Add more tickers as needed
 
 results = analyze_stocks(sp500_tickers)
 
@@ -398,3 +398,5 @@ for ticker, price in results_sorted[:5]:
 print("\nBottom predicted stocks:")
 for ticker, price in results_sorted[-5:]:
     print(f"{ticker}: {price}")
+
+plt.show()
