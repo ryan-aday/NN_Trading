@@ -12,6 +12,7 @@ Creating deep learning and regression models to trade with. Keeping this public 
  - Added new references to tqdm for progress bar and holidays for holiday dates.
  - Set os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0' for floating-point calcs to not be rounded off (and to remove the annoying warning)
  - max_workers = 64 for performance improvements w/o bogging other environmental processes. Found through trial & error.
+ - Note: Ran parameter tuning for dl.py and dl_gru.py. Parameters are optimized for the most part. Layer units also optimized through brute-forcing, and current scripts have the most stable outputs with the unit amounts.
 
 
 ## SFI_AI
