@@ -31,7 +31,23 @@ NOTE: Currently, to have predictions that are meaningful to project for the futu
 ### Before running:
 Run the following command to install/update the necessary libraries:
 
-pip3 install --upgrade --force-reinstall -r requirements.txt
+    pip3 install --upgrade --force-reinstall -r requirements.txt
+
+### Troubleshooting:
+1. ImportError: lxml.html.clean module is now a separate project lxml_html_clean. Install lxml[html_clean] or lxml_html_clean directly.
+
+This is due to your Python version. lxml relates to the Article package, and works with the Python 3.10.
+As a fix- if you are using Anaconda, make a new environment for Python 3.10:
+
+    conda create python=3.10 --name py310
+
+Then, activate the environment before running the scripts:
+
+    conda activate py310
+
+To deactivate the environment:
+
+    conda deactivate
 
 ### Data Aggregation
 Uses nltk & Hugging Face (Transformer) for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
