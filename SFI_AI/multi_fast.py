@@ -375,7 +375,7 @@ def analyze_stocks(tickers):
             plt.ylabel('Closing Price')
             plt.title(f'{ticker} Stock Price Prediction')
             plt.legend()
-            plt.show()
+            plt.show(block=False)
 
         else:
             print(f"No stock data available for {ticker}.")
