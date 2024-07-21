@@ -14,3 +14,4 @@ statsmodels
 tqdm
 holidays
 lxml==4.9.3
+matplotlib
