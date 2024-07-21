@@ -49,6 +49,8 @@ To deactivate the environment:
 
     conda deactivate
 
+If that still doesn't work, try replacing the lxml package with version 4.9.3. This should work with recent versions of the other dependencies of the Article package.
+
 ### Data Aggregation
 Uses nltk & Hugging Face (Transformer) for sentiment analysis, Yahoo Finance & requests, newspaper for related news articles, BeautifulSoup (bs4) for document parsing, ta for certain financial indicators.
 
