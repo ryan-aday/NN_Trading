@@ -97,7 +97,7 @@ The features used for future regression predictions are semi-normally distribute
 The sentiment analysis index (0 for low sentiment, 1 for good sentiment) is used to determine variability: adjusted_std = std * (1 - sentiment_mean)/2 * 0.5
 The 0.5 factor was introduced to reduce observed heavily volatile price movement in all stocks.
 
-The output plot has the actual & historica closing price data and the predicted price data. Since the regression model is extremely accurate, the actual historical data plot line has been made more opaque and thicker to differentiate between the curves.
+The output plot has the actual & historical closing price data and the predicted price data. Since the regression model is extremely accurate, the actual historical data plot line has been made more opaque and thicker to differentiate between the curves.
 
 Example output plot:
 ![Figure_10](https://github.com/user-attachments/assets/cfde7168-fd1f-4c17-9676-ef087e2e0cdc)
