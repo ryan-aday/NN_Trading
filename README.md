@@ -1,12 +1,28 @@
 # NN_Trading
-Creating NN models to trade with. Keeping this public for all to access &amp; improve!
+Creating deep learning and regression models to trade with. Keeping this public for all to access &amp; improve!
+
+## Updates:
+7/21/2024:
+ - Added plots to bin.py and dl.py to also show historical closing price data.
+ - Remade the bin.py script such that sentiment was binary classfied, then predicted for the regression model to predict future closing prices
+ - Adam is the only algorithm now in dl.py, all other optimizers found to be way too inaccurate
+ - Rewrote the dl.py script to use LSTM layers instead of Dense layers to improve accuracy (made sense due to time basis)
+ - Added dl_gru.py script to try to improve upon dl.py accuracy.
+ - Tried hybrid model (not pushed) with GRU then LSTM layers and vice versa. Less accurate than both strict models.
+ - Added new references to tqdm for progress bar and holidays for holiday dates.
+ - Set os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0' for floating-point calcs to not be rounded off (and to remove the annoying warning)
+ - max_workers = 64 for performance improvements w/o bogging other environmental processes. Found through trial & error.
+
 
 ## SFI_AI
 Sentiment & Financial Indicator (SFI) AI models.
 
 Aggregates all financial data and news articles for the past 1000 days, then uses features from the financial data and sentiment analysis to determine whether the ticker is likely to go up or down in price the following day.
 
-Both the bin.py and dl.py scripts compare different model/optimizer algorithms w/ different parameters to train, then select the best model/optimizer to provide the model with the best accuracy. Both are also parallelized for improved efficiency (max_workers = 16).
+Both the bin.py and dl.py scripts compare different model/optimizer algorithms w/ different parameters to train, then select the best model/optimizer to provide the model with the best accuracy. Both are also parallelized for improved efficiency (max_workers = 64).
+
+NOTE: The holiday feature designates which days are holidays, to better characterize stock price behavior.
+NOTE: Currently, to have predictions that are meaningful to project for the future 2 weeks, the future predictions use the best model w/ the closing prices and features of the last 30 days. This is a "quirk", and a more permanent fix may be necessary.
 
 ### Before running:
 Run the following command to install/update the necessary libraries:
@@ -70,7 +86,7 @@ Least processing time for decent accuracy (usually around ~75% for the optimized
         }
     }
 
-Update (7/18/2024): The script now includes various regression models to predict the next two weeks closing price.
+The script now includes various regression models to predict the next two weeks closing price.
 The regression models:
  - Random Forest
  - Linear Regression (Linear regression does not have hyperparameters to tune in this context)
@@ -81,46 +97,39 @@ The features used for future regression predictions are semi-normally distribute
 The sentiment analysis index (0 for low sentiment, 1 for good sentiment) is used to determine variability: adjusted_std = std * (1 - sentiment_mean)/2 * 0.5
 The 0.5 factor was introduced to reduce observed heavily volatile price movement in all stocks.
 
+The output plot has the actual & historica closing price data and the predicted price data. Since the regression model is extremely accurate, the actual historical data plot line has been made more opaque and thicker to differentiate between the curves.
+
 Example output plot:
-![Figure_2](https://github.com/user-attachments/assets/a7a6f462-a57a-4d5d-b5ca-21b6ac001a39)
+![Figure_10](https://github.com/user-attachments/assets/cfde7168-fd1f-4c17-9676-ef087e2e0cdc)
+
 
 ### dl.py: Deep Learning
-Uses sklearn, transformers to apply binary classification models with varying parameters to optimize each model for improved accuracy.
+Uses sklearn, transformers, tensorflow to develop a deep learning network with parameters to optimize each provided model for improved accuracy.
 
 Models used:
- - Adam (Adaptive Moment Estimation)
- - Lion
- - Stochiastic Gradient Descent
+ - Adam (Adaptive Moment Estimation), optimizer and shown parameters chosen through trial and error
 
-Deep Learning stucture is a single input layer, 2 hidden layer  w/ relu activation functions.
+Deep Learning stucture is a single input layer, 2 hidden LSTM layers w/ relu activation functions.
 
     model = Sequential()
-    model.add(Dense(1024, input_dim=X_train.shape[1], activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Input(shape=(X_train.shape[1], 1)))
+    model.add(LSTM(128, activation='relu', return_sequences=True))
+    model.add(Dropout(0.2))
+    model.add(LSTM(128, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(1, activation='linear'))
 
-    optimizers = [
-        ('Adam', {
-            'learning_rate': [0.001, 0.0001],
-            'beta_1': [0.9, 0.85],
-            'beta_2': [0.999, 0.9999],
-            'epsilon': [1e-7, 1e-8, 1e-9]
-        }),
-        ('SGD', {
-            'learning_rate': [0.01, 0.1],
-            'momentum': [0.8, 0.9]
-        }),
-        # Placeholder, assuming Lion has similar params
-        ('Lion', {
-            'learning_rate': [0.001, 0.01],
-            'beta_1': [0.9, 0.95],
-            'beta_2': [0.999, 0.995],
-            'epsilon': [1e-7, 1e-8],
-            'amsgrad': [True, False]
-        })
-    ]
+    optimizer = Adam(learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, epsilon=epsilon)
+
+    param_grid = {
+        'learning_rate': [0.005],
+        'beta_1': [0.90],
+        'beta_2': [0.999],
+        'epsilon': [1e-8]
+    }
+
+Example output plot:
+![Figure_1](https://github.com/user-attachments/assets/0118fb60-6296-46c4-a6f0-5eefdb8bfab3)
 
 Good sources:
  - https://machinelearningmastery.com/dropout-for-regularizing-deep-neural-networks/
@@ -134,6 +143,43 @@ Good sources:
  - https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam
  - https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
  - https://datascience.stackexchange.com/questions/38955/how-does-the-validation-split-parameter-of-keras-fit-function-work
+
+### dl_gru.py: Deep Learning w/ GRU Layers
+Uses sklearn, transformers, tensorflow to develop a deep learning network with parameters to optimize each provided model for improved accuracy.
+
+Models used:
+ - Adam (Adaptive Moment Estimation), optimizer and shown parameters chosen through trial and error
+
+Deep Learning stucture is a single input layer, 2 hidden LSTM layers w/ relu activation functions.
+
+    model = Sequential()
+    model.add(Input(shape=(X_train.shape[1], 1)))
+    model.add(GRU(128, activation='relu', return_sequences=True))
+    model.add(Dropout(0.2))
+    model.add(GRU(64, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(1, activation='linear'))
+
+    optimizer = Adam(learning_rate=learning_rate, beta_1=beta_1, beta_2=beta_2, epsilon=epsilon)
+
+    param_grid = {
+        'learning_rate': [0.000625],
+        'beta_1': [0.8, 0.85],
+        'beta_2': [0.9999],
+        'epsilon': [1.75e-6, 2e-6]
+        
+    }
+
+Example output plot:
+![Figure_9](https://github.com/user-attachments/assets/b9060af9-2efa-4e63-a885-79fa906a57e5)
+
+Good sources:
+ - https://www.tensorflow.org/api_docs/python/tf/keras/layers/GRU
+
+## Evaluation and Analysis of an LSTM and GRU Based Stock Investment Strategy
+Interesting paper that led to my rabbit hole away from the Dense model.
+
+https://www.researchgate.net/publication/379175870_Comparative_Analysis_of_LSTM_GRU_and_ARIMA_Models_for_Stock_Market_Price_Prediction
 
 ## NeptuneAI (Experimental)
 Experimental repository for trying ARIMA, Prophet, and NeptuneAI models to predict stock prices. The most promising was ARIMA theoretically.
