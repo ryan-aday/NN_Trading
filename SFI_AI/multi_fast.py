@@ -186,7 +186,7 @@ def predict(model, new_data, model_name):
     else:
         return model.predict(new_data)
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
 def get_news_sentiment(ticker, start_date, end_date):
     sentiment_analyzer = pipeline('sentiment-analysis')
     dates = pd.date_range(start=start_date, end=end_date, freq='B')
@@ -205,7 +205,7 @@ def get_news_sentiment(ticker, start_date, end_date):
             last_sentiment = sentiment_score if sentiment_score != 0 else last_sentiment
     return pd.Series(sentiment_scores, index=dates)
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
 def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
     sentiment_score = 0
     try:
@@ -220,7 +220,7 @@ def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
         sentiment_score = last_sentiment
     return sentiment_score
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
 def get_news_articles(ticker, date):
     query = f"{ticker} stock news {date.strftime('%Y-%m-%d')}"
     url = f"https://www.google.com/search?q={query}&tbm=nws"
@@ -285,6 +285,7 @@ def analyze_stocks(tickers):
             historical_features['Sentiment'] = historical_data_window['Sentiment']
             future_features = generate_gaussian_features(historical_features, future_dates, features.columns)
             future_features['Sentiment'] = predict(best_classification_model, future_features, best_model_name)
+            future_features = future_features.sort_index()
             future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
             future_prices = pd.Series(future_predictions, index=future_dates)
             percent_change = ((future_prices.iloc[-1] - stock_data['Close'].iloc[-1]) / stock_data['Close'].iloc[-1]) * 100
@@ -308,7 +309,8 @@ def analyze_stocks(tickers):
             print(f"No stock data available for {ticker}.")
     return results
 
-sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM', 'ADBE', 'ORCL', 'BA', 'INTC', 'PANW', 'AMD', 'FTNT', 'OXY']
+#sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM', 'ADBE', 'ORCL', 'BA', 'INTC', 'PANW', 'AMD', 'FTNT', 'OXY']
+sp500_tickers = ['AAPL']
 
 results = analyze_stocks(sp500_tickers)
 
