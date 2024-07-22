@@ -63,66 +63,39 @@ def add_holiday_feature(data):
     return data
 
 def create_features(data, daily_data):
-    # Create a copy to avoid SettingWithCopyWarning
     data = data.copy()
-
-    # Time Features
     data.loc[:, 'Hour'] = data.index.hour
     data.loc[:, 'DayOfWeek'] = data.index.dayofweek
     data.loc[:, 'Minute'] = data.index.minute
-
-    # Merging daily open price with intraday data
     daily_data = daily_data.resample('T').ffill().reindex(data.index)
     data.loc[:, 'Daily_Open'] = daily_data['Open']
     data.loc[:, 'Daily_Close'] = daily_data['Close']
-
-    # Moving Averages
     data.loc[:, 'SMA_5'] = data['Close'].rolling(window=5).mean()
     data.loc[:, 'SMA_10'] = data['Close'].rolling(window=10).mean()
     data.loc[:, 'EMA_12'] = data['Close'].ewm(span=12, adjust=False).mean()
     data.loc[:, 'EMA_26'] = data['Close'].ewm(span=26, adjust=False).mean()
-
-    # MACD
     data.loc[:, 'MACD'] = data['EMA_12'] - data['EMA_26']
     data.loc[:, 'Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
-
-    # RSI
     data.loc[:, 'RSI'] = ta.momentum.RSIIndicator(data['Close'], window=14).rsi()
-
-    # Bollinger Bands
     bollinger = ta.volatility.BollingerBands(data['Close'], window=20, window_dev=2)
     data.loc[:, 'BB_Mid'] = bollinger.bollinger_mavg()
     data.loc[:, 'BB_Upper'] = bollinger.bollinger_hband()
     data.loc[:, 'BB_Lower'] = bollinger.bollinger_lband()
-
-    # On-Balance Volume (OBV)
     data.loc[:, 'OBV'] = ta.volume.OnBalanceVolumeIndicator(data['Close'], data['Volume']).on_balance_volume()
-
-    # Accumulation/Distribution (A/D) Line
     data.loc[:, 'A/D'] = ta.volume.AccDistIndexIndicator(data['High'], data['Low'], data['Close'], data['Volume']).acc_dist_index()
-
-    # Average Directional Index (ADX)
     data.loc[:, 'ADX'] = ta.trend.ADXIndicator(data['High'], data['Low'], data['Close'], window=14).adx()
-
-    # Aroon Indicator
     aroon = ta.trend.AroonIndicator(high=data['High'], low=data['Low'], window=25)
     data.loc[:, 'Aroon_Up'] = aroon.aroon_up()
     data.loc[:, 'Aroon_Down'] = aroon.aroon_down()
-
-    # Stochastic Oscillator
     stochastic = ta.momentum.StochasticOscillator(high=data['High'], low=data['Low'], close=data['Close'], window=14, smooth_window=3)
     data.loc[:, 'Stochastic_Oscillator'] = stochastic.stoch()
-
-    # Add Holiday Feature
     data = add_holiday_feature(data)
-
     data.dropna(inplace=True)
     features = data[['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Holiday']]
     return features, data['Direction'], data['Close']
 
 def train_classification_models(features, labels):
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.1, random_state=42)
-
     models = {
         'LogisticRegression': LogisticRegression(max_iter=1000),
         'RandomForest': RandomForestClassifier(),
@@ -132,7 +105,6 @@ def train_classification_models(features, labels):
             ('svc', SVC(kernel='rbf'))
         ])
     }
-
     param_grids = {
         'LogisticRegression': {'C': [0.01, 0.1, 1, 10]},
         'RandomForest': {'n_estimators': [50, 100, 150], 'max_depth': [5, 10, 15]},
@@ -143,11 +115,9 @@ def train_classification_models(features, labels):
             'svc__gamma': ['scale', 'auto']
         }
     }
-
     best_models = {}
     best_accuracy = 0
     best_model_name = None
-
     for model_name in models.keys():
         grid_search = GridSearchCV(models[model_name], param_grids[model_name], cv=3, scoring='accuracy', n_jobs=-1)
         grid_search.fit(X_train, y_train)
@@ -159,35 +129,29 @@ def train_classification_models(features, labels):
         print("Accuracy:", accuracy)
         print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
         print("Classification Report:\n", classification_report(y_test, y_pred))
-
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             best_model_name = model_name
-
     print(f"Best Classification Model: {best_model_name} with accuracy: {best_accuracy}")
     return best_models, best_model_name, best_accuracy
 
 def train_regression_models(features, prices):
     X_train, X_test, y_train, y_test = train_test_split(features, prices, test_size=0.1, random_state=42)
-
     models = {
         'RandomForest': RandomForestRegressor(),
         'LinearRegression': LinearRegression(),
         'SVR': SVR(),
         'ARIMA': sm.tsa.ARIMA
     }
-
     param_grids = {
         'RandomForest': {'n_estimators': [50, 100, 150], 'max_depth': [5, 10, 15]},
-        'LinearRegression': {},  # Linear regression does not have hyperparameters to tune in this context
+        'LinearRegression': {},
         'SVR': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']},
         'ARIMA': {'order': [(5, 1, 0), (0, 1, 1), (1, 1, 1), (0, 1, 0)]}
     }
-
     best_models = {}
     best_mse = float('inf')
     best_model_name = None
-
     for model_name in models.keys():
         if model_name == 'ARIMA':
             for order in param_grids[model_name]['order']:
@@ -213,7 +177,6 @@ def train_regression_models(features, prices):
                 best_mse = mse
                 best_model_name = model_name
                 best_params = grid_search.best_params_
-
     print(f"Best Regression Model: {best_model_name} with MSE: {best_mse} and Parameters: {best_params}")
     return best_models, best_model_name
 
@@ -223,13 +186,12 @@ def predict(model, new_data, model_name):
     else:
         return model.predict(new_data)
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 def get_news_sentiment(ticker, start_date, end_date):
     sentiment_analyzer = pipeline('sentiment-analysis')
     dates = pd.date_range(start=start_date, end=end_date, freq='B')
     sentiment_scores = []
-    last_sentiment = 0  # Initialize last_sentiment to neutral score
-
+    last_sentiment = 0
     with ThreadPoolExecutor(max_workers=64) as executor:
         future_to_date = {executor.submit(get_daily_sentiment, sentiment_analyzer, ticker, date, last_sentiment): date for date in tqdm(dates, desc="Aggregating News Sentiment")}
         for future in tqdm(as_completed(future_to_date), total=len(future_to_date), desc="Processing Sentiment Scores"):
@@ -238,14 +200,12 @@ def get_news_sentiment(ticker, start_date, end_date):
                 sentiment_score = future.result()
             except Exception as e:
                 logger.error(f"Error processing date {date}: {e}")
-                sentiment_score = last_sentiment  # Use the last sentiment score if there's an error
-
+                sentiment_score = last_sentiment
             sentiment_scores.append(sentiment_score)
             last_sentiment = sentiment_score if sentiment_score != 0 else last_sentiment
-
     return pd.Series(sentiment_scores, index=dates)
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
     sentiment_score = 0
     try:
@@ -254,13 +214,13 @@ def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
             scores = [sentiment_analyzer(article['content'])[0]['score'] * (1 if sentiment_analyzer(article['content'])[0]['label'] == 'POSITIVE' else -1) for article in articles]
             sentiment_score = np.mean(scores) if scores else last_sentiment
         else:
-            sentiment_score = last_sentiment  # Use last sentiment score if no articles are found
+            sentiment_score = last_sentiment
     except RequestException as e:
         logger.error(f"Error fetching articles for date {date}: {e}")
-        sentiment_score = last_sentiment  # Use last sentiment score if there's an error
+        sentiment_score = last_sentiment
     return sentiment_score
 
-@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 def get_news_articles(ticker, date):
     query = f"{ticker} stock news {date.strftime('%Y-%m-%d')}"
     url = f"https://www.google.com/search?q={query}&tbm=nws"
@@ -272,7 +232,6 @@ def get_news_articles(ticker, date):
     except (SSLError, RequestException) as e:
         logger.error(f"Error fetching articles for date {date}: {e}")
         return []
-
     articles = []
     for result in soup.find_all('div', class_='BVG0Nb'):
         try:
@@ -281,10 +240,7 @@ def get_news_articles(ticker, date):
             article = Article(link)
             article.download()
             article.parse()
-            articles.append({
-                'title': title,
-                'content': article.text
-            })
+            articles.append({'title': title, 'content': article.text})
         except Exception as e:
             logger.error(f"Error processing article for date {date}: {e}")
             continue
@@ -292,91 +248,53 @@ def get_news_articles(ticker, date):
 
 def generate_gaussian_features(historical_features, future_dates, feature_names):
     future_features = pd.DataFrame(index=future_dates)
-
     for feature in feature_names:
         mean = historical_features[feature].mean()
         std = historical_features[feature].std()
         future_features[feature] = np.random.normal(mean, std, len(future_dates))
-
     return future_features
 
 def analyze_stocks(tickers):
     results = []
-
     for ticker in tickers:
         print(f"Processing {ticker}...")
-        # Parameters
         interval = '1d'
         start_date = (datetime.now() - timedelta(days=1000)).strftime('%Y-%m-%d')
         end_date = datetime.now().strftime('%Y-%m-%d')
-
-        # Get stock data
         stock_data = get_stock_data(ticker, interval, start_date, end_date)
-
         if not stock_data.empty:
-            # Get daily open and close prices
             daily_data = get_daily_data(ticker, start_date, end_date)
-
-            # Get news sentiment scores
             sentiment_scores = get_news_sentiment(ticker, start_date, end_date)
-
-            # Ensure datetime indices are compatible
             sentiment_scores.index = sentiment_scores.index.tz_localize(None)
             stock_data.index = stock_data.index.tz_localize(None)
-
-            # Align sentiment scores with stock data
             stock_data = stock_data.join(sentiment_scores.rename('Sentiment'), how='left').fillna(0)
-
-            # Create features and labels
             features, labels, prices = create_features(stock_data, daily_data)
             features['Sentiment'] = stock_data['Sentiment']
-
-            # Train classification models
             best_classification_models, best_model_name, best_accuracy = train_classification_models(features, labels)
             best_classification_model = best_classification_models[best_model_name]
-
-            # Train regression models
             best_regression_models, best_regression_model_name = train_regression_models(features, prices)
             best_regression_model = best_regression_models[best_regression_model_name]
-
-            # Example of making a prediction
-            new_data = features.iloc[-1:].values  # Using the most recent data point as an example
+            new_data = features.iloc[-1:].values
             for model_name, model in best_classification_models.items():
                 prediction = predict(model, new_data, model_name)
                 print(f"Prediction for the next day with {model_name}:", "Up" if prediction == 1 else "Down")
-
-            # Predict historical prices using the regression model
             historical_predictions = predict(best_regression_model, features, best_regression_model_name)
-
-            # Generate future feature data for the next two weeks (10 weekdays) using Gaussian estimates
             future_dates = pd.bdate_range(start=end_date, periods=10)
-            # Use only the past 30 days of historical data for generating future features
             historical_data_window = stock_data[-30:]
             historical_features, _, _ = create_features(historical_data_window, daily_data)
             historical_features['Sentiment'] = historical_data_window['Sentiment']
-
             future_features = generate_gaussian_features(historical_features, future_dates, features.columns)
-
-            # Predict stock price for the next two weeks
+            future_features['Sentiment'] = predict(best_classification_model, future_features, best_model_name)
             future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
             future_prices = pd.Series(future_predictions, index=future_dates)
-
-            # Calculate percent change
             percent_change = ((future_prices.iloc[-1] - stock_data['Close'].iloc[-1]) / stock_data['Close'].iloc[-1]) * 100
-
-            # Calculate volatility index
             volatility_index = np.std(future_prices)
-
             results.append((ticker, percent_change, volatility_index))
-
             print(f"Best Classification Model: {best_model_name}")
             print(f"Best Classification Model Accuracy: {best_accuracy}")
-            print(f"Best Regression Model Accuracy: {best_regression_model_name}")
-
+            print(f"Best Regression Model: {best_regression_model_name}")
             print("Predicted stock prices for the next two weeks:")
             print(future_prices)
-
-            # Plot historical, predicted historical, and future predicted prices
             plt.figure(figsize=(14, 7))
             plt.plot(stock_data.index[-120:], stock_data['Close'][-120:], color='green', alpha=0.5, linewidth=10, label='Historical Closing Price')
             plt.plot(stock_data.index[-120:], historical_predictions[-120:], color='blue', label='Predicted Historical Closing Price')
@@ -386,21 +304,16 @@ def analyze_stocks(tickers):
             plt.title(f'{ticker} Stock Price Prediction')
             plt.legend()
             plt.show(block=False)
-
         else:
             print(f"No stock data available for {ticker}.")
-
     return results
 
-# Example tickers for S&P 500 or S&P 1000
-sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM', 'ADBE', 'ORCL', 'BA', 'INTC', 'PANW', 'AMD', 'FTNT', 'OXY']  # Add more tickers as needed
+sp500_tickers = ['AAPL', 'MSFT', 'AMZN', 'META', 'CRWD', 'NVDA', 'GDDY', 'VST', 'DDOG', 'MU', 'TSM', 'ADBE', 'ORCL', 'BA', 'INTC', 'PANW', 'AMD', 'FTNT', 'OXY']
 
 results = analyze_stocks(sp500_tickers)
 
-# Sort results by percent change and volatility index
 results_sorted = sorted(results, key=lambda x: (x[1], -x[2]), reverse=True)
 
-# Display top and bottom stocks
 print("Top predicted stocks:")
 for ticker, percent_change, volatility_index in results_sorted[:5]:
     print(f"{ticker}: Percent Change: {percent_change:.2f}%, Volatility Index: {volatility_index:.2f}")
