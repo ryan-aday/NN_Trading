@@ -26,6 +26,7 @@ import statsmodels.api as sm
 import holidays
 import logging
 from tqdm import tqdm
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 nltk.download('vader_lexicon')
 
@@ -222,6 +223,7 @@ def predict(model, new_data, model_name):
     else:
         return model.predict(new_data)
 
+@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def get_news_sentiment(ticker, start_date, end_date):
     sentiment_analyzer = pipeline('sentiment-analysis')
     dates = pd.date_range(start=start_date, end=end_date, freq='B')
@@ -243,6 +245,7 @@ def get_news_sentiment(ticker, start_date, end_date):
 
     return pd.Series(sentiment_scores, index=dates)
 
+@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
     sentiment_score = 0
     try:
@@ -257,6 +260,7 @@ def get_daily_sentiment(sentiment_analyzer, ticker, date, last_sentiment):
         sentiment_score = last_sentiment  # Use last sentiment score if there's an error
     return sentiment_score
 
+@retry(stop=stop_after_attempt(5), wait=wait_fixed(2))
 def get_news_articles(ticker, date):
     query = f"{ticker} stock news {date.strftime('%Y-%m-%d')}"
     url = f"https://www.google.com/search?q={query}&tbm=nws"
@@ -344,8 +348,8 @@ def analyze_stocks(tickers):
             # Predict historical prices using the regression model
             historical_predictions = predict(best_regression_model, features, best_regression_model_name)
 
-            # Generate future feature data for the next two weeks using Gaussian estimates
-            future_dates = pd.date_range(start=end_date, periods=14, freq='B')
+            # Generate future feature data for the next two weeks (10 weekdays) using Gaussian estimates
+            future_dates = pd.bdate_range(start=end_date, periods=10)
             # Use only the past 30 days of historical data for generating future features
             historical_data_window = stock_data[-30:]
             historical_features, _, _ = create_features(historical_data_window, daily_data)
