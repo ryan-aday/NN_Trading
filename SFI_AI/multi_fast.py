@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier
 from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import Pipeline
@@ -27,6 +27,7 @@ import holidays
 import logging
 from tqdm import tqdm
 from tenacity import retry, stop_after_attempt, wait_fixed
+from deepecho.models.par import PARModel
 
 # Download necessary NLTK data
 nltk.download('vader_lexicon')
@@ -41,23 +42,13 @@ def get_stock_data(ticker, interval, start_date, end_date):
         data = yf.download(ticker, interval=interval, start=start_date, end=end_date)
         if data.empty:
             raise ValueError(f"No data fetched for {ticker} with interval {interval} from {start_date} to {end_date}")
+        data = data.asfreq('B', method='ffill')
         data['Return'] = data['Close'].pct_change()
         data['Direction'] = np.where(data['Return'] > 0, 1, 0)
         data.dropna(inplace=True)
         return data
     except Exception as e:
         logger.error(f"Error fetching data for {ticker}: {e}")
-        return pd.DataFrame()
-
-# Function to fetch daily stock data
-def get_daily_data(ticker, start_date, end_date):
-    try:
-        data = yf.download(ticker, interval='1d', start=start_date, end=end_date)
-        if data.empty:
-            raise ValueError(f"No daily data fetched for {ticker} from {start_date} to {end_date}")
-        return data[['Open', 'Close']]
-    except Exception as e:
-        logger.error(f"Error fetching daily data for {ticker}: {e}")
         return pd.DataFrame()
 
 # Function to add holiday feature
@@ -67,34 +58,24 @@ def add_holiday_feature(data):
     return data
 
 # Function to create features
-def create_features(data, daily_data):
+def create_features(data, ticker):
     data = data.copy()
-    
-    # Adding time-based features
-    data.loc[:, 'Hour'] = data.index.hour
-    data.loc[:, 'DayOfWeek'] = data.index.dayofweek
-    data.loc[:, 'Minute'] = data.index.minute
-    
-    # Merging daily open price with intraday data
-    daily_data = daily_data.resample('T').ffill().reindex(data.index)
-    data.loc[:, 'Daily_Open'] = daily_data['Open']
-    data.loc[:, 'Daily_Close'] = daily_data['Close']
-    
+
     # Adding technical indicators
     data.loc[:, 'SMA_5'] = data['Close'].rolling(window=5).mean()
     data.loc[:, 'SMA_10'] = data['Close'].rolling(window=10).mean()
-    data.loc[:, 'EMA_12'] = data['Close'].ewm(span=12, adjust=False).mean()
-    data.loc[:, 'EMA_26'] = data['Close'].ewm(span=26, adjust=False).mean()
+    data.loc[:, 'EMA_12'] = data['Close'].ewm(span=12, adjust=True).mean()
+    data.loc[:, 'EMA_26'] = data['Close'].ewm(span=26, adjust=True).mean()
     data.loc[:, 'MACD'] = data['EMA_12'] - data['EMA_26']
-    data.loc[:, 'Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
+    data.loc[:, 'Signal_Line'] = data['MACD'].ewm(span=9, adjust=True).mean()
     data.loc[:, 'RSI'] = ta.momentum.RSIIndicator(data['Close'], window=14).rsi()
-    
+
     # Bollinger Bands
     bollinger = ta.volatility.BollingerBands(data['Close'], window=20, window_dev=2)
     data.loc[:, 'BB_Mid'] = bollinger.bollinger_mavg()
     data.loc[:, 'BB_Upper'] = bollinger.bollinger_hband()
     data.loc[:, 'BB_Lower'] = bollinger.bollinger_lband()
-    
+
     # Volume and trend indicators
     data.loc[:, 'OBV'] = ta.volume.OnBalanceVolumeIndicator(data['Close'], data['Volume']).on_balance_volume()
     data.loc[:, 'A/D'] = ta.volume.AccDistIndexIndicator(data['High'], data['Low'], data['Close'], data['Volume']).acc_dist_index()
@@ -102,28 +83,27 @@ def create_features(data, daily_data):
     aroon = ta.trend.AroonIndicator(high=data['High'], low=data['Low'], window=25)
     data.loc[:, 'Aroon_Up'] = aroon.aroon_up()
     data.loc[:, 'Aroon_Down'] = aroon.aroon_down()
-    
+
     # Stochastic Oscillator
     stochastic = ta.momentum.StochasticOscillator(high=data['High'], low=data['Low'], close=data['Close'], window=14, smooth_window=3)
     data.loc[:, 'Stochastic_Oscillator'] = stochastic.stoch()
-    
+
     # Adding holiday feature
     data = add_holiday_feature(data)
-    
+
     # Dropping rows with NaN values
     data.dropna(inplace=True)
-    
+
     # Selecting features for the model
-    features = data[['Hour', 'DayOfWeek', 'Minute', 'Daily_Open', 'Daily_Close', 'SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Holiday']]
+    features = data[['SMA_5', 'SMA_10', 'EMA_12', 'EMA_26', 'MACD', 'Signal_Line', 'RSI', 'BB_Mid', 'BB_Upper', 'BB_Lower', 'OBV', 'A/D', 'ADX', 'Aroon_Up', 'Aroon_Down', 'Stochastic_Oscillator', 'Holiday']]
     return features, data['Direction'], data['Close']
 
 # Function to train classification models
 def train_classification_models(features, labels):
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.1, random_state=42)
-    
+
     # Defining models and parameter grids for hyperparameter tuning
     models = {
-        'LogisticRegression': LogisticRegression(max_iter=1000),
         'RandomForest': RandomForestClassifier(),
         'GradientBoosting': GradientBoostingClassifier(),
         'SVC with SVD': Pipeline([
@@ -132,7 +112,6 @@ def train_classification_models(features, labels):
         ])
     }
     param_grids = {
-        'LogisticRegression': {'C': [0.01, 0.1, 1, 10]},
         'RandomForest': {'n_estimators': [50, 100, 150], 'max_depth': [5, 10, 15]},
         'GradientBoosting': {'n_estimators': [50, 100, 150, 200, 250], 'learning_rate': [0.01, 0.1, 0.15, 0.2]},
         'SVC with SVD': {
@@ -141,11 +120,11 @@ def train_classification_models(features, labels):
             'svc__gamma': ['scale', 'auto']
         }
     }
-    
+
     best_models = {}
     best_accuracy = 0
     best_model_name = None
-    
+
     # Training and tuning models
     for model_name in models.keys():
         grid_search = GridSearchCV(models[model_name], param_grids[model_name], cv=3, scoring='accuracy', n_jobs=-1)
@@ -166,8 +145,11 @@ def train_classification_models(features, labels):
 
 # Function to train regression models
 def train_regression_models(features, prices):
+    features = features.sort_index().asfreq('B')
+    prices = prices.sort_index().asfreq('B')
+
     X_train, X_test, y_train, y_test = train_test_split(features, prices, test_size=0.1, random_state=42)
-    
+
     # Defining models and parameter grids for hyperparameter tuning
     models = {
         'RandomForest': RandomForestRegressor(),
@@ -181,11 +163,11 @@ def train_regression_models(features, prices):
         'SVR': {'C': [0.1, 1, 10], 'gamma': ['scale', 'auto']},
         'ARIMA': {'order': [(5, 1, 0), (0, 1, 1), (1, 1, 1), (0, 1, 0)]}
     }
-    
+
     best_models = {}
     best_mse = float('inf')
     best_model_name = None
-    
+
     # Training and tuning models
     for model_name in models.keys():
         if model_name == 'ARIMA':
@@ -283,13 +265,24 @@ def get_news_articles(ticker, date):
             continue
     return articles
 
-# Function to generate future feature data using Gaussian estimates
-def generate_gaussian_features(historical_features, future_dates, feature_names):
-    future_features = pd.DataFrame(index=future_dates)
-    for feature in feature_names:
-        mean = historical_features[feature].mean()
-        std = historical_features[feature].std()
-        future_features[feature] = np.random.normal(mean, std, len(future_dates))
+# Function to generate future feature data using PARModel
+def generate_synthetic_features(historical_features, future_dates, feature_names):
+    data_types = {'Close': 'continuous'}
+    model = PARModel(cuda=False)
+    model.fit(
+        data=historical_features,
+        entity_columns=feature_names,
+        data_types=data_types,
+        #sequence_index='day'
+    )
+    forecast = model.predict(
+        horizon=len(future_dates),
+        future_covariates=None,
+        ignore_categoricals=True,
+        ignore_entities=False
+    )
+    future_features = pd.DataFrame(forecast, columns=feature_names)
+    future_features.index = future_dates
     return future_features
 
 # Function to analyze a list of stocks
@@ -300,67 +293,72 @@ def analyze_stocks(tickers):
         interval = '1d'
         start_date = (datetime.now() - timedelta(days=1000)).strftime('%Y-%m-%d')
         end_date = datetime.now().strftime('%Y-%m-%d')
-        
+       
         # Fetch stock data
         stock_data = get_stock_data(ticker, interval, start_date, end_date)
         if not stock_data.empty:
-            daily_data = get_daily_data(ticker, start_date, end_date)
             sentiment_scores = get_news_sentiment(ticker, start_date, end_date)
-            
+           
             # Ensure datetime indices are compatible
             sentiment_scores.index = sentiment_scores.index.tz_localize(None)
             stock_data.index = stock_data.index.tz_localize(None)
-            
+           
             # Align sentiment scores with stock data
-            stock_data = stock_data.join(sentiment_scores.rename('Sentiment'), how='left').fillna(0)
-            
+            stock_data = stock_data.join(sentiment_scores.rename('Sentiment'), how='left').dropna()
+
             # Create features and labels
-            features, labels, prices = create_features(stock_data, daily_data)
+            features, labels, prices = create_features(stock_data, ticker)
             features['Sentiment'] = stock_data['Sentiment']
-            
+           
             # Train classification and regression models
             best_classification_models, best_model_name, best_accuracy = train_classification_models(features, labels)
             best_classification_model = best_classification_models[best_model_name]
             best_regression_models, best_regression_model_name = train_regression_models(features, prices)
             best_regression_model = best_regression_models[best_regression_model_name]
             
+            '''
             # Example of making a prediction
             new_data = features.iloc[-1:].values
             for model_name, model in best_classification_models.items():
                 prediction = predict(model, new_data, model_name)
                 print(f"Prediction for the next day with {model_name}:", "Up" if prediction == 1 else "Down")
+            '''
             
             # Predict historical prices using the regression model
             historical_predictions = predict(best_regression_model, features, best_regression_model_name)
-            
-            # Generate future feature data for the next two weeks using Gaussian estimates
+           
+            # Generate future feature data for the next two weeks using PARModel
             future_dates = pd.bdate_range(start=end_date, periods=10)
-            historical_data_window = stock_data[-30:]
-            historical_features, _, _ = create_features(historical_data_window, daily_data)
-            historical_features['Sentiment'] = historical_data_window['Sentiment']
-            future_features = generate_gaussian_features(historical_features, future_dates, features.columns)
-            
+            historical_features = features[:]
+            future_features = generate_synthetic_features(historical_features, future_dates, features.columns)
+           
             # Predict sentiment for future dates
             future_features['Sentiment'] = predict(best_classification_model, future_features, best_model_name)
+            future_features = future_features.sort_index().asfreq('B')
+            print(stock_data)
+            
+            print(historical_features)
+
+            print(future_features)
             
             # Predict stock price for the next two weeks
             future_predictions = predict(best_regression_model, future_features, best_regression_model_name)
             future_prices = pd.Series(future_predictions, index=future_dates)
-            
+           
             # Calculate percent change
             percent_change = ((future_prices.iloc[-1] - stock_data['Close'].iloc[-1]) / stock_data['Close'].iloc[-1]) * 100
-            
+           
             # Calculate volatility index
             volatility_index = np.std(future_prices)
-            
+           
             results.append((ticker, percent_change, volatility_index))
-            
+           
             print(f"Best Classification Model: {best_model_name}")
             print(f"Best Classification Model Accuracy: {best_accuracy}")
             print(f"Best Regression Model: {best_regression_model_name}")
             print("Predicted stock prices for the next two weeks:")
             print(future_prices)
-            
+           
             # Plot historical, predicted historical, and future predicted prices
             plt.figure(figsize=(14, 7))
             plt.plot(stock_data.index[-120:], stock_data['Close'][-120:], color='green', alpha=0.5, linewidth=10, label='Historical Closing Price')

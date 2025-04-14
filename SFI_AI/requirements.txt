@@ -16,3 +16,4 @@ holidays
 lxml==4.9.3
 matplotlib
 tenacity
+deepecho
