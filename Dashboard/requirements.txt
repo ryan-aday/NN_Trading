@@ -1,0 +1,7 @@
+lxml
+yfinance
+pandas
+numpy
+scipy
+statsmodels
+datetime
